@@ -14,7 +14,8 @@ import * as path from 'path'
 
 export class MercariScraper {
     async scrape(url: string): Promise<ScrapedData> {
-        const isHeadless = process.env.HEADLESS !== 'false'
+        // Default to HEADED (visible) mode for better stealth/human-like behavior
+        const isHeadless = process.env.HEADLESS === 'true'
 
         // Check for auth.json
         const authPath = path.resolve(__dirname, '../auth.json')
@@ -67,6 +68,11 @@ export class MercariScraper {
             const pageTitle = await page.title()
             console.log('Page Title:', pageTitle)
 
+            // ----------------------------------------
+            // Human Mimicry: Scroll & Wait
+            // ----------------------------------------
+            await this.mimicHuman(page)
+
             // Extract Price (Mercari specific: structured data or specific classes)
             let price = 0
 
@@ -112,5 +118,31 @@ export class MercariScraper {
         } finally {
             await browser.close()
         }
+    }
+
+    private async mimicHuman(page: any) {
+        console.log('🤖 Mimicking human behavior...')
+
+        // Random mouse movement
+        await page.mouse.move(100, 100)
+        await page.waitForTimeout(Math.random() * 1000 + 500)
+
+        // Scroll down
+        await page.evaluate(() => {
+            window.scrollBy(0, window.innerHeight / 2)
+        })
+        await page.waitForTimeout(Math.random() * 2000 + 1000)
+
+        // Scroll a bit more
+        await page.evaluate(() => {
+            window.scrollBy(0, window.innerHeight / 2)
+        })
+        await page.waitForTimeout(Math.random() * 2000 + 1000)
+
+        // Scroll back up slightly (like reading)
+        await page.evaluate(() => {
+            window.scrollBy(0, -100)
+        })
+        await page.waitForTimeout(1000)
     }
 }

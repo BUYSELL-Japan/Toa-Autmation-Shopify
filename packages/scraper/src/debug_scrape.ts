@@ -5,36 +5,58 @@ import * as path from 'path'
 async function debugScrape(url: string) {
     console.log(`Debug scraping: ${url}`)
     const browser = await chromium.launch({
-        headless: true,
-        args: ['--disable-blink-features=AutomationControlled']
+        headless: true, // Keep headerless for consistent debugging environment
+        args: [
+            '--disable-blink-features=AutomationControlled',
+            '--no-sandbox',
+            '--disable-setuid-sandbox'
+        ]
     })
     const context = await browser.newContext({
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         viewport: { width: 1280, height: 800 },
-        locale: 'ja-JP'
+        locale: 'ja-JP',
+        timezoneId: 'Asia/Tokyo'
     })
 
+    // Stealth
     await context.addInitScript(() => {
         Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
     })
 
     const page = await context.newPage()
 
+    // 1. Capture Console Logs
+    page.on('console', msg => console.log('BROWSER CONSOLE:', msg.text()))
+
+    // 2. Capture Network Response
+    page.on('response', response => {
+        if (response.url() === url || response.status() > 399) {
+            console.log(`RESPONSE: ${response.status()} ${response.url()}`)
+            console.log('HEADERS:', JSON.stringify(response.headers(), null, 2))
+        }
+    })
+
     try {
-        await page.goto(url, { waitUntil: 'load', timeout: 30000 })
+        console.log('Navigating...')
+        const response = await page.goto(url, { waitUntil: 'load', timeout: 30000 })
 
-        // Take Screenshot
-        const text = await page.title()
-        console.log(`Page Title: ${text}`)
+        console.log('--- Navigation Complete ---')
+        console.log(`Final URL: ${page.url()}`)
+        console.log(`Status: ${response?.status()}`)
 
+        const title = await page.title()
+        console.log(`Page Title: ${title}`)
+
+        // 3. Screenshot
         const screenshotPath = path.resolve(__dirname, '../debug_screenshot.png')
         await page.screenshot({ path: screenshotPath, fullPage: true })
-        console.log(`Screenshot saved to: ${screenshotPath}`)
+        console.log(`Screenshot saved: ${screenshotPath}`)
 
-        // Dump HTML
+        // 4. HTML Dump
         const htmlPath = path.resolve(__dirname, '../debug_page.html')
         fs.writeFileSync(htmlPath, await page.content())
-        console.log(`HTML saved to: ${htmlPath}`)
+        console.log(`HTML saved: ${htmlPath}`)
 
     } catch (e) {
         console.error('Debug Error:', e)
