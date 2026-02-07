@@ -11,46 +11,68 @@ export interface ScrapedData {
 
 export class MercariScraper {
     async scrape(url: string): Promise<ScrapedData> {
-        const browser = await chromium.launch({ headless: true }) // Set headless: false for debugging
-        const page = await browser.newPage()
+        const browser = await chromium.launch({ headless: true })
+        const context = await browser.newContext({
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        })
+        const page = await context.newPage()
 
-        // Block images/fonts to speed up
+        // Block heavy resources
         await page.route('**/*', (route) => {
             const type = route.request().resourceType()
-            if (['image', 'font', 'stylesheet'].includes(type)) route.abort()
+            if (['image', 'font', 'stylesheet', 'media'].includes(type) && !url.includes('mercari')) route.abort()
             else route.continue()
         })
 
         try {
-            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+            console.log(`Navigating to ${url}...`)
+            await page.goto(url, { waitUntil: 'load', timeout: 60000 })
 
-            // Generic fallback selectors + specific Mercari handling
-            const title = await page.title()
+            // Wait for critical elements
+            try {
+                await page.waitForSelector('h1', { timeout: 10000 })
+            } catch (e) {
+                console.log('Timeout waiting for h1, verifying title...')
+            }
 
-            // Try to find price via common meta tags or structured data
-            // Mercari often puts price in og:price:amount or json-ld
+            const pageTitle = await page.title()
+            console.log('Page Title:', pageTitle)
+
+            // Extract Price (Mercari specific: structured data or specific classes)
             let price = 0
-            const priceMeta = await page.$('meta[name="twitter:data1"]') // Sometimes price is here
+
+            // 1. Try meta tags (robust)
+            const priceMeta = await page.$('meta[property="product:price:amount"]') ||
+                await page.$('meta[name="twitter:data1"]')
             if (priceMeta) {
                 const content = await priceMeta.getAttribute('content')
                 if (content) price = parseInt(content.replace(/[^0-9]/g, ''))
             }
 
-            // Fallback: try finding price in DOM
+            // 2. Try Merari specific structured data (mer-price)
             if (!price) {
-                // This selector is fragile and might key changing. 
-                // Better approach: Look for currency symbol near numbers
+                // New Mercari UI often uses data-testid="price"
+                const priceEl = await page.$('[data-testid="price"]')
+                if (priceEl) {
+                    const text = await priceEl.innerText()
+                    price = parseInt(text.replace(/[^0-9]/g, ''))
+                }
+            }
+
+            // 3. Last reosrt: Regex on body (expensive but effective)
+            if (!price) {
                 const bodyText = await page.innerText('body')
-                const priceMatch = bodyText.match(/¥\s*([0-9,]+)/)
-                if (priceMatch) {
-                    price = parseInt(priceMatch[1].replace(/,/g, ''))
+                // Look for ¥12,345 pattern near top
+                const match = bodyText.match(/¥([0-9,]+)/)
+                if (match) {
+                    price = parseInt(match[1].replace(/,/g, ''))
                 }
             }
 
             return {
-                title: await page.title(),
+                title: pageTitle,
                 price,
-                description: '', // Mercari desc is usually complex to extract cleanly without specific selectors
+                description: '',
                 images: [],
                 url
             }
