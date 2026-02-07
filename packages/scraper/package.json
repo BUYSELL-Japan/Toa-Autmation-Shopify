@@ -5,7 +5,8 @@
     "scripts": {
         "start": "ts-node src/index.ts",
         "debug": "ts-node src/debug_scrape.ts",
-        "auth": "ts-node src/setup_auth.ts"
+        "auth": "ts-node src/setup_auth.ts",
+        "test-launch": "ts-node src/test_launch.ts"
     },
     "dependencies": {
         "playwright": "^1.40.0"
