@@ -14,22 +14,35 @@ export function ResearchView() {
         setResults(null);
 
         try {
-            // TODO: Connect to backend API
             console.log('Scraping:', { mercariUrl, subUrls: [subUrl1, subUrl2] });
 
-            // Mock result for now
-            setTimeout(() => {
-                setResults({
-                    title: "Mock Mercari Item",
-                    price: 5000,
-                    description: "Combined description from sub URLs...\n\nSource 1: Great condition.\nSource 2: Limited edition.",
-                    images: ["https://placehold.co/600x400", "https://placehold.co/600x400?text=Sub1", "https://placehold.co/600x400?text=Sub2"]
-                });
-                setLoading(false);
-            }, 1000);
+            // 1. Scrape Main URL (Mercari)
+            const response = await fetch('http://localhost:3001/scrape', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: mercariUrl })
+            });
+
+            if (!response.ok) throw new Error('Scraping failed');
+
+            const mainData = await response.json();
+
+            // 2. Scrape Sub URLs (Parallel)
+            // TODO: Implement sub-url scraping logic similarly if needed
+            // For now, just use main data
+
+            setResults({
+                title: mainData.title,
+                price: mainData.price,
+                description: mainData.description || 'No description extracted yet.',
+                images: mainData.images || []
+            });
+
+            setLoading(false);
 
         } catch (error) {
             console.error(error);
+            alert('Scraping failed. Make sure the local server is running (npm run serve in packages/scraper).');
             setLoading(false);
         }
     };
