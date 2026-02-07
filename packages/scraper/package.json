@@ -3,7 +3,8 @@
     "version": "1.0.0",
     "main": "src/index.ts",
     "scripts": {
-        "start": "ts-node src/index.ts"
+        "start": "ts-node src/index.ts",
+        "debug": "ts-node src/debug_scrape.ts"
     },
     "dependencies": {
         "playwright": "^1.40.0"
