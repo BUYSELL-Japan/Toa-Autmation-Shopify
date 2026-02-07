@@ -115,7 +115,9 @@ export function ResearchView() {
                         <div className="w-2/3">
                             <h4 className="text-lg font-bold mb-2">{results.title}</h4>
                             <p className="text-2xl font-bold text-accent mb-4">¥{results.price.toLocaleString()}</p>
-                            <div className="p-4 bg-[#0f172a] rounded-lg">
+
+                            <div className="p-4 bg-[#0f172a] rounded-lg max-h-96 overflow-y-auto">
+                                <h5 className="text-sm font-bold text-gray-400 mb-2">Description & Details</h5>
                                 <p className="text-gray text-sm whitespace-pre-wrap">{results.description}</p>
                             </div>
                             <div className="mt-4 flex gap-2">
