@@ -90,6 +90,13 @@ export class AmazonScraper {
 
         } catch (e) {
             console.error('Amazon Scrape Error:', e)
+            try {
+                const debugPath = require('path').resolve(__dirname, '../debug_amazon_error.png')
+                await page.screenshot({ path: debugPath, fullPage: true })
+                console.log(`Saved error screenshot to: ${debugPath}`)
+            } catch (err) {
+                console.error('Failed to save screenshot', err)
+            }
             return { url, title: 'Error Scraping Amazon' }
         } finally {
             await browser.close()

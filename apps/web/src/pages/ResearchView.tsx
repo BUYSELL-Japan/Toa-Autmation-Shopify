@@ -95,7 +95,7 @@ export function ResearchView() {
                     </div>
 
                     <button type="submit" disabled={loading} className="btn-primary flex items-center justify-center gap-2 mt-2">
-                        {loading ? 'Scraping...' : <><Play size={18} /> Start Multi-Source Scraping</>}
+                        {loading ? status : <><Play size={18} /> Start Multi-Source Scraping</>}
                     </button>
                 </form>
             </div>
