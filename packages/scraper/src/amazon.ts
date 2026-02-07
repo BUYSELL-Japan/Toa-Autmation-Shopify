@@ -37,7 +37,23 @@ export class AmazonScraper {
 
             // 1. Title
             const title = await page.title()
+            console.log('Page Title:', title)
+
             const productTitle = await page.$eval('#productTitle', el => el.textContent?.trim()).catch(() => title) || title
+
+            // Price extraction
+            let price = 0
+            try {
+                const priceText = await page.$eval('.a-price .a-offscreen', el => el.textContent).catch(() => null) ||
+                    await page.$eval('#priceblock_ourprice', el => el.textContent).catch(() => null) ||
+                    await page.$eval('#priceblock_dealprice', el => el.textContent).catch(() => null);
+
+                if (priceText) {
+                    price = parseInt(priceText.replace(/[^0-9]/g, ''))
+                }
+            } catch (e) {
+                console.log('Price extraction failed:', e)
+            }
 
             // 2. Images (landingImage or altImages)
             const images: string[] = []
@@ -82,7 +98,7 @@ export class AmazonScraper {
 
             return {
                 title: productTitle as string,
-                price: 0, // Not requested but required by type
+                price, // Use extracted price
                 description,
                 images,
                 url
@@ -97,7 +113,13 @@ export class AmazonScraper {
             } catch (err) {
                 console.error('Failed to save screenshot', err)
             }
-            return { url, title: 'Error Scraping Amazon' }
+            return {
+                url,
+                title: 'Error Scraping Amazon',
+                price: 0,
+                description: 'Failed to scrape this URL.',
+                images: []
+            }
         } finally {
             await browser.close()
         }

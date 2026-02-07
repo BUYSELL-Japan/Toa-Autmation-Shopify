@@ -20,7 +20,10 @@ export function ResearchView() {
             const response = await fetch('http://localhost:3001/scrape', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: mercariUrl })
+                body: JSON.stringify({
+                    url: mercariUrl,
+                    subUrls: [subUrl1, subUrl2].filter(u => u) // Filter empty strings
+                })
             });
 
             if (!response.ok) throw new Error('Scraping failed');
