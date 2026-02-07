@@ -11,16 +11,35 @@ export interface ScrapedData {
 
 export class MercariScraper {
     async scrape(url: string): Promise<ScrapedData> {
-        const browser = await chromium.launch({ headless: true })
-        const context = await browser.newContext({
-            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        const isHeadless = process.env.HEADLESS !== 'false'
+        const browser = await chromium.launch({
+            headless: isHeadless,
+            args: [
+                '--disable-blink-features=AutomationControlled',
+                '--no-sandbox',
+                '--disable-setuid-sandbox'
+            ]
         })
+        const context = await browser.newContext({
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            viewport: { width: 1920, height: 1080 },
+            locale: 'ja-JP',
+            timezoneId: 'Asia/Tokyo'
+        })
+
+        // Stealth scripts
+        await context.addInitScript(() => {
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined,
+            })
+        })
+
         const page = await context.newPage()
 
-        // Block heavy resources
+        // Block heavy resources (relaxed for better loading chance)
         await page.route('**/*', (route) => {
             const type = route.request().resourceType()
-            if (['image', 'font', 'stylesheet', 'media'].includes(type) && !url.includes('mercari')) route.abort()
+            if (['font'].includes(type)) route.abort() // Only block fonts, allow images/scripts for now to look real
             else route.continue()
         })
 
