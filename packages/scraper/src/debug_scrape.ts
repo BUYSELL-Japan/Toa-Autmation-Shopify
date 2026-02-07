@@ -4,11 +4,20 @@ import * as path from 'path'
 
 async function debugScrape(url: string) {
     console.log(`Debug scraping: ${url}`)
-    const browser = await chromium.launch({ headless: true }) // Keep headless true to test actual condition, or false to see it
-    const context = await browser.newContext({
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        viewport: { width: 1280, height: 800 }
+    const browser = await chromium.launch({
+        headless: true,
+        args: ['--disable-blink-features=AutomationControlled']
     })
+    const context = await browser.newContext({
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        viewport: { width: 1280, height: 800 },
+        locale: 'ja-JP'
+    })
+
+    await context.addInitScript(() => {
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
+    })
+
     const page = await context.newPage()
 
     try {
