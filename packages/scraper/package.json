@@ -4,7 +4,8 @@
     "main": "src/index.ts",
     "scripts": {
         "start": "ts-node src/index.ts",
-        "debug": "ts-node src/debug_scrape.ts"
+        "debug": "ts-node src/debug_scrape.ts",
+        "auth": "ts-node src/setup_auth.ts"
     },
     "dependencies": {
         "playwright": "^1.40.0"

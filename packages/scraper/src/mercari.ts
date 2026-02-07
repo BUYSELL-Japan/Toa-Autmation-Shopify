@@ -9,9 +9,18 @@ export interface ScrapedData {
     url: string
 }
 
+import * as fs from 'fs'
+import * as path from 'path'
+
 export class MercariScraper {
     async scrape(url: string): Promise<ScrapedData> {
         const isHeadless = process.env.HEADLESS !== 'false'
+
+        // Check for auth.json
+        const authPath = path.resolve(__dirname, '../auth.json')
+        const hasAuth = fs.existsSync(authPath)
+        if (hasAuth) console.log('Using authenticated session from auth.json')
+
         const browser = await chromium.launch({
             headless: isHeadless,
             args: [
@@ -24,7 +33,8 @@ export class MercariScraper {
             userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             viewport: { width: 1920, height: 1080 },
             locale: 'ja-JP',
-            timezoneId: 'Asia/Tokyo'
+            timezoneId: 'Asia/Tokyo',
+            storageState: hasAuth ? authPath : undefined
         })
 
         // Stealth scripts
