@@ -785,37 +785,36 @@ app.post('/shopify/create', async (c) => {
           if (t.language_code.toLowerCase() === 'en') continue;
           tData[t.language_code.toLowerCase()] = { title: t.title, body_html: t.body_html };
         }
+        translationResults = await tService.registerTranslations(shopifyProductId, tData);
       }
-      translationResults = await tService.registerTranslations(shopifyProductId, tData);
-    }
 
       await DB.prepare("UPDATE products SET status = 'uploaded', shopify_product_id = ? WHERE id = ?").bind(shopifyProductId, id).run();
 
-    // CHANNELS
-    if (publicationIds?.length > 0) {
-      const cService = new ShopifyChannelService({ shopName: SHOPIFY_SHOP_NAME, accessToken: token });
-      for (const pubId of publicationIds) await cService.publishProduct(shopifyProductId, pubId);
+      // CHANNELS
+      if (publicationIds?.length > 0) {
+        const cService = new ShopifyChannelService({ shopName: SHOPIFY_SHOP_NAME, accessToken: token });
+        for (const pubId of publicationIds) await cService.publishProduct(shopifyProductId, pubId);
+      }
+
+      return c.json({ success: true, productId: shopifyProductId, translationResults });
+
+    } catch (e: any) {
+      console.error('Error in /shopify/create:', e)
+      return c.json({
+        error: e.message,
+        stack: e.stack,
+        // @ts-ignore
+        details: e.response ? await e.response.text() : undefined
+      }, 500)
     }
-
-    return c.json({ success: true, productId: shopifyProductId, translationResults });
-
-  } catch (e: any) {
-    console.error('Error in /shopify/create:', e)
+  } catch (globalErr: any) {
+    console.error('CRITICAL GLOBAL CRASH in /shopify/create:', globalErr);
     return c.json({
-      error: e.message,
-      stack: e.stack,
-      // @ts-ignore
-      details: e.response ? await e.response.text() : undefined
-    }, 500)
+      error: 'Critical Global Crash',
+      message: globalErr.message,
+      stack: globalErr.stack
+    }, 500);
   }
-} catch (globalErr: any) {
-  console.error('CRITICAL GLOBAL CRASH in /shopify/create:', globalErr);
-  return c.json({
-    error: 'Critical Global Crash',
-    message: globalErr.message,
-    stack: globalErr.stack
-  }, 500);
-}
 })
 
 // Token Status Endpoint
