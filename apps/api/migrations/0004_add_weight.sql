@@ -1,0 +1,3 @@
+-- Migration number: 0002 	 2024-02-10T00:00:00.000Z
+
+ALTER TABLE products ADD COLUMN weight_g INTEGER DEFAULT 0;

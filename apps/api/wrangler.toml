@@ -4,6 +4,6 @@ compatibility_date = "2024-02-06"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "toa-db"
-database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # Placeholder for local dev
+database_name = "japan-anime-shoten-db"
+database_id = "11e1901c-f5e8-4879-80a6-8b2b784fb113"
 

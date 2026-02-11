@@ -7,6 +7,7 @@ export interface ScrapedData {
     images?: string[]
     currency?: string
     url: string
+    logs?: string[]
 }
 
 import * as fs from 'fs'

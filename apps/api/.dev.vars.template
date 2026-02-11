@@ -1,0 +1,19 @@
+# Shopify Configuration
+# IMPORTANT: Replace these with your actual values
+
+# Your Shopify store name (without .myshopify.com)
+SHOPIFY_SHOP_NAME=japan-anime-shoten-2
+
+# Get a new access token from Shopify Admin:
+# 1. Go to: https://admin.shopify.com/store/japan-anime-shoten-2/settings/apps/development
+# 2. Create or select your app
+# 3. Click "Create new access token" with ALL scopes
+# 4. Copy the token and paste it below (starts with shpat_)
+SHOPIFY_ACCESS_TOKEN=YOUR_ACCESS_TOKEN_HERE
+
+# OAuth credentials (optional, for future OAuth flow)
+SHOPIFY_CLIENT_ID=YOUR_CLIENT_ID_HERE
+SHOPIFY_CLIENT_SECRET=YOUR_CLIENT_SECRET_HERE
+
+# OpenAI API Key for translations
+OPENAI_API_KEY=YOUR_OPENAI_KEY_HERE
