@@ -97,11 +97,15 @@ export function ProductList() {
                         {filteredProducts.map(product => {
                             const images = (() => {
                                 try {
-                                    const parsed = JSON.parse(product.images_json || '[]');
+                                    // Handle cases where images_json is double-stringified or just a string
+                                    let parsed = JSON.parse(product.images_json || '[]');
+                                    if (typeof parsed === 'string') {
+                                        parsed = JSON.parse(parsed);
+                                    }
                                     return Array.isArray(parsed) ? parsed : [];
                                 } catch (e) { return []; }
                             })();
-                            const mainImage = images[0] || null;
+                            const mainImage = images.length > 0 ? images[0] : null;
 
                             return (
                                 <div key={product.id} className="group relative bg-[#1e293b]/40 border border-[#334155]/50 rounded-xl overflow-hidden hover:border-accent/50 hover:bg-[#1e293b]/60 hover:shadow-[0_0_20px_-5px_rgba(34,197,94,0.15)] transition-all duration-300 flex flex-col">

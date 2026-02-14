@@ -209,9 +209,14 @@ export function ResearchView() {
 
 
     const handleFormat = async () => {
-        if (!results) return;
+        if (!results) {
+            console.error('No results to format');
+            alert('No scraped results found. Please scrape a product first.');
+            return;
+        }
 
         try {
+            console.log('Requesting format for:', { title: results.title });
             const response = await fetch(`${API_BASE_URL}/products/format`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -222,24 +227,34 @@ export function ResearchView() {
             });
 
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || 'Formatting failed');
+                const errText = await response.text();
+                let errMsg = 'Formatting failed';
+                try {
+                    const errJson = JSON.parse(errText);
+                    errMsg = errJson.error || errMsg;
+                } catch (e) { errMsg = errText; }
+                throw new Error(errMsg);
             }
 
             const formatted = await response.json();
+            console.log('Formatted AI Response:', formatted);
+
+            if (!formatted || !formatted.ja) {
+                throw new Error('Invalid AI response format: Missing "ja" key');
+            }
 
             setResults({
                 ...results,
                 title: formatted.ja.title,
                 description: formatted.ja.body_html,
-                weight_g: formatted.estimated_weight_g || 500, // Set estimated weight
+                weight_g: formatted.estimated_weight_g || 500,
                 translations: []
             });
 
-            alert('Formatted successfully! (Japanese only - Please translate in Edit page)');
+            alert('Formatted successfully!');
 
         } catch (e: any) {
-            console.error(e);
+            console.error('Format Error:', e);
             alert(`Format failed: ${e.message}`);
         }
     };
@@ -305,20 +320,15 @@ export function ResearchView() {
             {results && (
                 <div className="glass-panel p-6">
                     <h3 className="text-xl font-bold mb-4">Scraped Result (Mock)</h3>
-                    <div className="flex gap-6">
-                        <div className="w-1/3">
-                            <div className="w-full h-80 bg-black/20 rounded-lg mb-2 flex items-center justify-center overflow-hidden">
-                                <img src={results.images[0]} alt={results.title} className="max-w-full max-h-full object-contain" />
-                            </div>
-                            <div className="flex gap-2">
-                                {results.images.slice(1).map((img: string, i: number) => (
-                                    <img key={i} src={img} className="w-16 h-16 rounded object-cover" />
-                                ))}
+                    <div className="flex gap-4">
+                        <div className="w-24 flex-shrink-0">
+                            <div className="w-24 h-24 bg-black/20 rounded-lg mb-2 flex items-center justify-center overflow-hidden border border-white/10">
+                                <img src={results.images[0]} alt={results.title} className="w-full h-full object-cover" />
                             </div>
                         </div>
-                        <div className="w-2/3">
-                            <h4 className="text-lg font-bold mb-2">{results.title}</h4>
-                            <p className="text-2xl font-bold text-accent mb-4">¥{results.price.toLocaleString()}</p>
+                        <div className="flex-1">
+                            <h4 className="text-sm font-bold mb-1 line-clamp-2">{results.title}</h4>
+                            <p className="text-lg font-bold text-accent mb-2">¥{Number(results.price || 0).toLocaleString()}</p>
 
                             <div className="p-4 bg-[#0f172a] rounded-lg max-h-96 overflow-y-auto mb-4">
                                 <h5 className="text-sm font-bold text-gray-400 mb-2">Description & Details</h5>

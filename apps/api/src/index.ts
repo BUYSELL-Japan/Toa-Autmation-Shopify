@@ -21,7 +21,7 @@ type Bindings = {
 const app = new Hono<{ Bindings: Bindings }>()
 
 app.use('/*', cors({
-  origin: '*',
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -604,12 +604,19 @@ app.post('/shopify/create', async (c) => {
 
     try {
       const body = await c.req.json()
-      const { id, market_prices, publicationIds } = body
+      const { id, market_prices, publicationIds, inventory_quantity } = body
 
       if (!id) return c.json({ error: 'Product ID is required' }, 400)
 
       const product = await DB.prepare('SELECT * FROM products WHERE id = ?').bind(id).first() as any
       if (!product) return c.json({ error: 'Product not found' }, 404)
+
+      // Update Inventory in DB if provided
+      const targetInventory = inventory_quantity !== undefined ? Number(inventory_quantity) : (product.inventory_quantity || 1);
+      if (inventory_quantity !== undefined) {
+        await DB.prepare('UPDATE products SET inventory_quantity = ? WHERE id = ?').bind(targetInventory, id).run();
+        product.inventory_quantity = targetInventory; // Update local obj
+      }
 
       // 0. Fetch Shop Currency
       let shopCurrency = 'JPY';
@@ -678,6 +685,9 @@ app.post('/shopify/create', async (c) => {
         status: 'active',
         vendor: 'TOA Automation',
         product_type: 'Anime Goods',
+        // Default to "Dolls, Playsets & Toy Figures" (Action Figures & Toy Figures)
+        // This corresponds to "アクションフィギュア・トイフィギュア" in Japanese mapping
+        category: 'gid://shopify/TaxonomyCategory/aa-8',
         variants: [{
           price: String(finalBasePrice),
           weight: weightG,
@@ -738,7 +748,7 @@ app.post('/shopify/create', async (c) => {
       }
 
       // INVENTORY
-      if (defaultVariantId && product.inventory_quantity !== undefined) {
+      if (defaultVariantId) {
         try {
           const varRes = await fetch(`${shopUrl}/variants/${defaultVariantId}.json`, { headers });
           const varData = await varRes.json() as any;
@@ -748,15 +758,20 @@ app.post('/shopify/create', async (c) => {
             const locData = await locRes.json() as any;
             const locationId = locData.locations?.[0]?.id;
             if (locationId) {
-              await fetch(`${shopUrl}/inventory_levels/set.json`, {
+              const invPayload = {
+                location_id: locationId,
+                inventory_item_id: inventoryItemId,
+                available: targetInventory
+              };
+              console.log('[Inventory] Setting inventory:', invPayload);
+              const invRes = await fetch(`${shopUrl}/inventory_levels/set.json`, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({
-                  location_id: locationId,
-                  inventory_item_id: inventoryItemId,
-                  available: Number(product.inventory_quantity)
-                })
+                body: JSON.stringify(invPayload)
               });
+              if (!invRes.ok) {
+                console.error('[Inventory] Failed:', await invRes.text());
+              }
             }
           }
         } catch (e) { console.error('Inventory Sync failed', e); }
@@ -792,8 +807,17 @@ app.post('/shopify/create', async (c) => {
 
       // CHANNELS
       if (publicationIds?.length > 0) {
+        console.log('[Channels] Publishing to:', publicationIds);
         const cService = new ShopifyChannelService({ shopName: SHOPIFY_SHOP_NAME, accessToken: token });
-        for (const pubId of publicationIds) await cService.publishProduct(shopifyProductId, pubId);
+        for (const pubId of publicationIds) {
+          try {
+            await cService.publishProduct(shopifyProductId, pubId);
+          } catch (e) {
+            console.error(`[Channels] Failed to publish to ${pubId}`, e);
+          }
+        }
+      } else {
+        console.warn('[Channels] No publication IDs provided.');
       }
 
       return c.json({ success: true, productId: shopifyProductId, translationResults });

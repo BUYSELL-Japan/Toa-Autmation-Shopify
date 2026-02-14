@@ -69,11 +69,13 @@ export class ShopifyTranslationService {
     ): Promise<any> {
         // First, get the translatable content to get digests
         const contentResult = await this.getTranslatableContent(productId)
+        console.log(`[Translation] Content Result for ${productId}:`, JSON.stringify(contentResult));
+
         const translatableContent = contentResult.data?.translatableResource?.translatableContent
 
         if (!translatableContent) {
             console.warn('No translatable content found for product', productId)
-            return { success: false, message: 'No translatable content found' }
+            return { success: false, message: 'No translatable content found', debug: contentResult }
         }
 
         // Map language codes
@@ -153,7 +155,13 @@ export class ShopifyTranslationService {
             const result = await response.json()
             results.push({ locale, result })
 
-            console.log(`Registered translations for ${locale}:`, result)
+            if (result.errors) {
+                console.error(`[Translation] Error registering for ${locale}:`, JSON.stringify(result.errors));
+            } else if (result.data?.translationsRegister?.userErrors?.length > 0) {
+                console.error(`[Translation] UserErrors for ${locale}:`, JSON.stringify(result.data.translationsRegister.userErrors));
+            } else {
+                console.log(`[Translation] Success for ${locale}`);
+            }
         }
 
         return { success: true, results }
