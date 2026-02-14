@@ -152,7 +152,7 @@ export class ShopifyTranslationService {
                 })
             })
 
-            const result = await response.json()
+            const result: any = await response.json()
             results.push({ locale, result })
 
             if (result.errors) {
